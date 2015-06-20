@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="fr">
+<head>
+	<meta charset="utf-8">
+	<title>Titre de la page</title>
+	<style>
+		.node {
+			stroke: #fff;
+			stroke-width: 1px;
+		}
+		.link {
+			stroke: #999;
+			stroke-opacity: .6;
+		}
+	</style>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js" charset="utf-8"></script>
+</head>
+<body>
+	<script>
+		var width = window.innerWidth;
+		var height = window.innerHeight;
+
+		var color = d3.scale.category20();
+
+		var force = d3.layout.force()
+		.charge(-30)
+		.theta(0.5)
+		.linkDistance(30)
+		.gravity(0.40)
+		.size([width, height]);
+
+		var canvas = d3.select("body").append("canvas")
+		.attr("width", width)
+		.attr("height", height);
+
+		var globalGraph;
+
+		d3.json("infections.json", function(error, graph) {
+			if (error) throw error;
+
+			globalGraph = graph;
+
+			var context = canvas.node().getContext("2d");
+
+			force.nodes(graph.nodes).links(graph.links).start();
+
+			// var link = svg.selectAll(".link")
+			// .data(graph.links)
+			// .enter().append("line")
+			// .attr("class", "link")
+			// .style("stroke-width", function(d) {
+			// 	return 0.3;
+			// });
+
+			// var node = svg.selectAll(".node")
+			// .data(graph.nodes)
+			// .enter().append("circle")
+			// .attr("class", "node")
+			// .attr("r", 5)
+			// .style("fill", function(d) {
+			// 	return color(d.group);
+			// })
+			// .call(force.drag);
+
+			// node.append("title").text(function(d) {
+			// 	return d.name;
+			// });
+
+			force.on("tick", function() {
+				context.clearRect(0, 0, width, height);
+
+				context.strokeStyle = "#ccc";
+				context.beginPath();
+				graph.links.forEach(function(d) {
+					context.moveTo(d.source.x, d.source.y);
+					context.lineTo(d.target.x, d.target.y);
+				});
+				context.stroke();
+
+				context.fillStyle = "red";
+				context.beginPath();
+				graph.nodes.forEach(function(d) {
+					if(d.group == 1) {
+						context.moveTo(d.x, d.y);
+						context.arc(d.x, d.y, 4.5, 0, 2 * Math.PI);
+					}
+				});
+				context.fill();
+
+				context.fillStyle = "steelblue";
+				context.beginPath();
+				graph.nodes.forEach(function(d) {
+					if(d.group != 1) {
+						context.moveTo(d.x, d.y);
+						context.arc(d.x, d.y, 4.5, 0, 2 * Math.PI);
+					}
+				});
+				context.fill();
+			});
+		});
+
+		function getMousePos(canvas, evt) {
+			var rect = canvas.node().getBoundingClientRect();
+			return {
+				x: evt.clientX - rect.left,
+				y: evt.clientY - rect.top
+			};
+		}
+
+		canvas.on("mouseup", function() {
+			globalGraph.nodes.some(function(d) {
+				var x = Math.round(d.x);
+				var y = Math.round(d.y);
+				var mousePos = getMousePos(canvas, window.event);
+				if(Math.sqrt(Math.pow(mousePos.x - x, 2) + Math.pow(mousePos.y - y, 2)) < 4.5) {
+					if(d.group == 1) {
+						console.log('Malware: ' + d.name + '\n' + 'Speed: 100/s');
+					} else {
+						console.log('Host: ' + d.name);
+					}
+					return true;
+				}
+				return false;
+			});
+		});
+	</script>
+</body>
+</html>
